@@ -1,0 +1,160 @@
+<html>
+<head>
+<style type="text/css">
+	#header{
+		top: 0;
+		position: fixed;
+		background-color: white;
+		width: 100%;
+	}
+	
+	#phaniTable {
+		margin-top: 10px;
+		border-collapse: collapse;
+		width: 98.75%;
+		background-color: #6dad5c;
+	}
+	
+	table tr td {
+		padding: 5px;
+		border: 1px solid #eee;
+		width: 5%;
+		word-wrap: break-word;
+	}
+	
+	.wrap table {
+		table-layout: fixed;
+	}
+	
+	.inner_table {
+		height: 450px;
+		overflow-y: auto;
+		width: 100%;
+	}
+	
+	#pt1 {
+		width: 100%;
+		border-collapse: collapse;
+		overflow: auto;
+		background-color: #ddd;
+	}
+	
+	table{
+		width: 100%;
+	}
+	
+	nav, .title {
+	  display: table;
+	}
+
+	.logo, .title {
+	  display: table-cell;
+	  vertical-align: middle;
+	}
+
+	span {
+	  padding: 0 15px;
+	}
+
+
+</style>
+<script type="text/javascript" src="https://ajax.googleapis.com/ajax/libs/jquery/3.1.1/jquery.min.js"></script>
+<script>
+	$(document).ready(function(){
+		var reportData = new Array();
+		var url = 'http://rwdwebsrvc2001:8080/Api/DEVURL.jsp';
+		console.log(url);
+		getconnection(url,getRemoteData);
+
+		function getconnection(url,callback)
+		{
+			console.log("getconnection = "+url);
+			http_request = new XMLHttpRequest();
+			http_request.open("POST", url,false);
+			http_request.onload = callback;
+			http_request.setRequestHeader("Content-Type", "application/x-www-form-urlencoded");
+			http_request.send(null);
+		}
+
+		function getRemoteData(e){
+			console.log("getRemoteData. readystate = "+http_request.readyState+" status = "+http_request.status);
+			if (http_request.readyState == 4){
+				if (http_request.status == 200||http_request.status == 0){
+					remotexmldata = e.target.responseText;
+					jsonData = eval('('+e.target.responseText+')');
+					console.log("jsonData length = "+ jsonData.Order.length)
+					$("#pt1 tr").remove();
+					for(var i=0; i<jsonData.Order.length; i++){
+						reportData[i] = new Array();
+						reportData[i]["0"] = (i+1)+". "+jsonData.Order[i]["EntryType"];
+						reportData[i]["1"] = jsonData.Order[i]["OrderDate"].substr(0,10);
+						var t1 = jsonData.Order[i]["OrderDate"].split("T");
+						var t2  = t1[1].split("+")
+						reportData[i]["2"] = t2[0];
+						reportData[i]["3"] = jsonData.Order[i]["OrderNo"];
+						reportData[i]["4"] = jsonData.Order[i]["OrderType"];
+						reportData[i]["5"] = jsonData.Order[i].OrderStatuses.OrderStatus[0].StatusDescription
+						reportData[i]["6"] = jsonData.Order[i]["OriginalTotalAmount"];
+						reportData[i]["7"] = jsonData.Order[i].OverallTotals["LineSubTotal"];
+						reportData[i]["8"] = jsonData.Order[i].OverallTotals["GrandCharges"];
+						reportData[i]["9"] = jsonData.Order[i].OverallTotals["GrandDiscount"];
+						reportData[i]["10"] = jsonData.Order[i].OverallTotals["GrandTotal"];
+						reportData[i]["11"] = jsonData.Order[i].OrderStatuses.OrderStatus[0].ShipNode;
+						reportData[i]["12"] = jsonData.Order[i].OrderStatuses.OrderStatus[0].StatusDate.substr(0,10);
+						reportData[i]["13"] = jsonData.Order[i].Extn.ExtnSlotTime.substr(0,10);
+						var st1 = jsonData.Order[i].Extn.ExtnSlotTime.split("-");
+						reportData[i]["14"] = st1[3];
+						
+						var table = document.getElementById("pt1");
+						var row = table.insertRow();
+						for(j=0; j<15; j++){
+							window["cell"+j] = row.insertCell(j);
+							window["cell"+j].innerHTML = reportData[i][j]
+						}							
+					}
+				}
+				else{
+					console.log("form.js.... else condition");
+				}
+			}
+		}
+	});
+</script>
+</head>
+<body>
+	<!--<div id="header">
+		<img src="DMartReady.svg" height="72px" width="240px" style="padding-left:50px">
+		<span style="font-size:32px; font-family:cursive;">Order Summery Report</span>
+	</div>-->
+	<nav>
+		<div class="logo"><img src="DMartReady.svg" height="72px" width="240px" style="padding-left:50px"></div>
+		<span class="title" style="font-size:32px; font-family:cursive;">Order Summery Report</span>
+	</nav>
+	<div class="wrap">
+		<table id="phaniTable" border="1">
+			<tr>
+				<td>Entry Type</td>
+				<td>Order Date</td>
+				<td>Order Time</td>
+				<td>Order No</td>
+				<td>Order Type</td>
+				<td>Status</td>
+				<td>Original Total Amount</td>
+				<td>Order Line Total</td>
+				<td>Shipping Charges</td>
+				<td>Discount</td>
+				<td>Grand Total</td>
+				<td>Ship Node</td>
+				<td>Status Date</td>
+				<td>Slot Date</td>
+				<td>Slot Time</td>
+			</tr>
+		</table>
+		<div class="inner_table">
+			<table id="pt1">
+				<tr><th>Loading...</th></tr>
+			</table>
+		</div>
+	</div>
+</body>
+</html>
