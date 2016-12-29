@@ -1,11 +1,9 @@
 <html>
 <head>
 <style type="text/css">
-	#header{
-		top: 0;
-		position: fixed;
-		background-color: white;
-		width: 100%;
+
+	nav{
+		margin-left: 15%;
 	}
 	
 	#phaniTable {
@@ -32,16 +30,24 @@
 		width: 100%;
 	}
 	
-	#pt1 {
+	#mainData {
 		width: 100%;
 		border-collapse: collapse;
 		overflow: auto;
 		background-color: #ddd;
 	}
 	
+	#dateTable{
+		width:70%;
+		margin-left: auto;
+		margin-right: auto;
+	}
+	
 	table{
 		width: 100%;
 	}
+	
+	th{padding:1%}
 	
 	nav, .title {
 	  display: table;
@@ -53,72 +59,100 @@
 	}
 
 	span {
-	  padding: 0 15px;
+	  padding: 0 65px;
+	}
+	
+	#dateSelection{
+		margin-top: 10%;
 	}
 
 
 </style>
 <script type="text/javascript" src="https://ajax.googleapis.com/ajax/libs/jquery/3.1.1/jquery.min.js"></script>
-<script>
-	$(document).ready(function(){
-		var reportData = new Array();
-		var url = 'http://rwdwebsrvc2001:8080/Api/DEVURL.jsp';
-		console.log(url);
+<script>		
+	var ordSumData;
+	var reportData = new Array();
+	var FromOrderDate;
+	var ToOrderDate;
+	var PageNumber = 1;
+	
+	function createURL(){
+		FromOrderDate = document.getElementById("startDate").value;
+		ToOrderDate = document.getElementById("endDate").value;
+		
+		var url = "http://10.0.27.241:8080/Reports/ordersummaryreport?PageNumber="+PageNumber+"&FromOrderDate="+FromOrderDate+"T00:00:00&ToOrderDate="+ToOrderDate+"T23:59:59";
+
 		getconnection(url,getRemoteData);
+	}
 
-		function getconnection(url,callback)
-		{
-			console.log("getconnection = "+url);
-			http_request = new XMLHttpRequest();
-			http_request.open("POST", url,false);
-			http_request.onload = callback;
-			http_request.setRequestHeader("Content-Type", "application/x-www-form-urlencoded");
-			http_request.send(null);
-		}
+	function getconnection(url,callback){
+		console.log("getconnection = "+url);
+		http_request = new XMLHttpRequest();
+		http_request.open("GET", url,false);
+		http_request.onload = callback;
+		http_request.setRequestHeader("Content-Type", "application/x-www-form-urlencoded");
+		http_request.send(null);
+	}
 
-		function getRemoteData(e){
-			console.log("getRemoteData. readystate = "+http_request.readyState+" status = "+http_request.status);
-			if (http_request.readyState == 4){
-				if (http_request.status == 200||http_request.status == 0){
-					remotexmldata = e.target.responseText;
-					jsonData = eval('('+e.target.responseText+')');
-					console.log("jsonData length = "+ jsonData.Order.length)
-					$("#pt1 tr").remove();
-					for(var i=0; i<jsonData.Order.length; i++){
-						reportData[i] = new Array();
-						reportData[i]["0"] = (i+1)+". "+jsonData.Order[i]["EntryType"];
-						reportData[i]["1"] = jsonData.Order[i]["OrderDate"].substr(0,10);
-						var t1 = jsonData.Order[i]["OrderDate"].split("T");
-						var t2  = t1[1].split("+")
-						reportData[i]["2"] = t2[0];
-						reportData[i]["3"] = jsonData.Order[i]["OrderNo"];
-						reportData[i]["4"] = jsonData.Order[i]["OrderType"];
-						reportData[i]["5"] = jsonData.Order[i].OrderStatuses.OrderStatus[0].StatusDescription
-						reportData[i]["6"] = jsonData.Order[i]["OriginalTotalAmount"];
-						reportData[i]["7"] = jsonData.Order[i].OverallTotals["LineSubTotal"];
-						reportData[i]["8"] = jsonData.Order[i].OverallTotals["GrandCharges"];
-						reportData[i]["9"] = jsonData.Order[i].OverallTotals["GrandDiscount"];
-						reportData[i]["10"] = jsonData.Order[i].OverallTotals["GrandTotal"];
-						reportData[i]["11"] = jsonData.Order[i].OrderStatuses.OrderStatus[0].ShipNode;
-						reportData[i]["12"] = jsonData.Order[i].OrderStatuses.OrderStatus[0].StatusDate.substr(0,10);
-						reportData[i]["13"] = jsonData.Order[i].Extn.ExtnSlotTime.substr(0,10);
-						var st1 = jsonData.Order[i].Extn.ExtnSlotTime.split("-");
-						reportData[i]["14"] = st1[3];
+	function getRemoteData(e){
+		console.log("getRemoteData. readystate = "+http_request.readyState+" status = "+http_request.status);
+		if (http_request.readyState == 4){
+			if (http_request.status == 200||http_request.status == 0){
+				remotexmldata = e.target.responseText;
+				jsonData = eval('('+e.target.responseText+')');
+				ordSumData = jsonData.Output.OrderList.Order
+				console.log("jsonData length = "+ ordSumData.length);
+				
+				$('#dateSelection').hide();
+				$('.wrap').show();
+				
+				for(var i=0; i<ordSumData.length; i++){
+					reportData[i] = new Array();
+					reportData[i]["0"] = (i+1)+". "+ordSumData[i]["EntryType"];
+					reportData[i]["1"] = ordSumData[i]["OrderDate"].substr(0,10);
+					var t1 = ordSumData[i]["OrderDate"].split("T");
+					var t2  = t1[1].split("+")
+					reportData[i]["2"] = t2[0];
+					reportData[i]["3"] = ordSumData[i]["OrderNo"];
+					var ot = ordSumData[i]["OrderType"].split("_")
+					if(ot[0] == "COD") var paymentType = "Cash On Delivery";
+					else if(ot[0] == "PREPAID") var paymentType = "PREPAID";
+					if(ot[1] == "SHP") var pickType = "SHIP";
+					else if(ot[1] == "PICK") var pickType = "PICK";
+					reportData[i]["4"] = paymentType;
+					reportData[i]["5"] = pickType;
+					reportData[i]["6"] = ordSumData[i].OrderStatuses.OrderStatus[0].StatusDescription
+					reportData[i]["7"] = ordSumData[i]["OriginalTotalAmount"];
+					reportData[i]["8"] = ordSumData[i].OverallTotals["LineSubTotal"];
+					reportData[i]["9"] = ordSumData[i].OverallTotals["GrandCharges"];
+					reportData[i]["10"] = ordSumData[i].OverallTotals["GrandDiscount"];
+					reportData[i]["11"] = ordSumData[i].OverallTotals["GrandTotal"];
+					reportData[i]["12"] = ordSumData[i].OrderStatuses.OrderStatus[0].ShipNode;
+					reportData[i]["13"] = ordSumData[i].OrderStatuses.OrderStatus[0].StatusDate.substr(0,10);
+					reportData[i]["14"] = ordSumData[i].Extn.ExtnSlotTime.substr(0,10);
+					var st1 = ordSumData[i].Extn.ExtnSlotTime.split("-");
+					reportData[i]["15"] = st1[3];
+					
+					var table = document.getElementById("mainData");
+					var row = table.insertRow();
+					for(j=0; j<16; j++){
 						
-						var table = document.getElementById("pt1");
-						var row = table.insertRow();
-						for(j=0; j<15; j++){
-							window["cell"+j] = row.insertCell(j);
-							window["cell"+j].innerHTML = reportData[i][j]
-						}							
-					}
-				}
-				else{
-					console.log("form.js.... else condition");
-				}
+						window["cell"+j] = row.insertCell(j);
+						window["cell"+j].innerHTML = reportData[i][j]
+					}							
+				} 
+			}
+			else{
+				console.log("form.js.... else condition");
 			}
 		}
-	});
+	}
+	
+	function showDateSelectionPage(){
+		$("#mainData").empty();
+		$('.wrap').hide();
+		$('#dateSelection').show();
+	}
 </script>
 </head>
 <body>
@@ -129,15 +163,38 @@
 	<nav>
 		<div class="logo"><img src="DMartReady.svg" height="72px" width="240px" style="padding-left:50px"></div>
 		<span class="title" style="font-size:32px; font-family:cursive;">Order Summery Report</span>
+		<div class="datepicker" onclick="showDateSelectionPage()"><img src="datePicker.png" height="72px" width="72px" style="padding-left:50px"></div>
 	</nav>
-	<div class="wrap">
+	
+<!-- Below div is to display selection criteria table -->
+	<div id="dateSelection">
+		<table id="dateTable" border="1">
+			<tr>
+				<th colspan="2"><h2>View Order Summery Report</h2></th>
+			</tr>
+			<tr>
+				<th><h3>From</h3></th>
+				<th><h3>TO</h3></th>
+			</tr>
+			<tr>
+				<th><input type="date" id="startDate"></th>
+				<th><input type="date" id="endDate"></th>
+			</tr>
+			<tr><th colspan="2"><input id="clickMe" type="button" value="View Order Summery Report" onclick="createURL();" /></th></tr>
+		</table>
+	</div>
+<!-- End of display selection criteria table -->
+	
+<!-- Below div is to display main report table -->	
+	<div class="wrap" style="display:none">
 		<table id="phaniTable" border="1">
 			<tr>
 				<td>Entry Type</td>
 				<td>Order Date</td>
 				<td>Order Time</td>
 				<td>Order No</td>
-				<td>Order Type</td>
+				<td>Payment Type</td>
+				<td>Pick Type</td>
 				<td>Status</td>
 				<td>Original Total Amount</td>
 				<td>Order Line Total</td>
@@ -151,10 +208,11 @@
 			</tr>
 		</table>
 		<div class="inner_table">
-			<table id="pt1">
-				<tr><th>Loading...</th></tr>
+			<table id="mainData">
+				<!--<tr><th>Loading...</th></tr>-->
 			</table>
 		</div>
 	</div>
+<!--End of main report table display -->
 </body>
 </html>
