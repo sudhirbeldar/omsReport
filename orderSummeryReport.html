@@ -6,11 +6,51 @@
 		margin-left: 15%;
 	}
 	
+	.logo img{
+		height: 72px;
+		width: 240px;
+		padding-left: 50px;
+	}
+	
+	.datePicker{
+		height:72px;
+		margin-right: 25px;
+	}
+	
+	.page{
+		height:72px;
+		margin-right:10px;
+	}
+	
+	.btnPrev, .btnNext{
+		height:72px;
+		margin-right: 4px;
+	}
+	
+	.datePicker img, .btnNext img, .btnPrev img{
+		vertical-align: middle;
+	}
+	
+	.datePicker, .page, .btnNext, .btnPrev{
+		float:left;
+	}
+	
+	.helper{
+		display: inline-block;
+		height: 100%;
+		vertical-align:middle;
+	}
+	
 	#phaniTable {
 		margin-top: 10px;
 		border-collapse: collapse;
 		width: 98.75%;
 		background-color: #6dad5c;
+	}
+	
+	#phaniTable tr td{
+		color: #fff;
+		font-weight: bold;
 	}
 	
 	table tr td {
@@ -58,12 +98,39 @@
 	  vertical-align: middle;
 	}
 
-	span {
+	.title {
 	  padding: 0 65px;
 	}
 	
 	#dateSelection{
 		margin-top: 10%;
+	}
+	
+	.btnDisable{
+		opacity: 0.2;
+	}
+	
+	.nodisplay{display: none}
+	
+	.button {
+		padding: 5px 15px;
+		font-size: 15px;
+		text-align: center;
+		cursor: pointer;
+		outline: none;
+		color: #fff;
+		background-color: #4CAF50;
+		border: none;
+		border-radius: 15px;
+		box-shadow: 0 7px #999;
+	}
+
+	.button:hover {background-color: #3e8e41}
+
+	.button:active {
+		background-color: #3e8e41;
+		box-shadow: 0 5px #666;
+		transform: translateY(4px);
 	}
 
 
@@ -74,15 +141,25 @@
 	var reportData = new Array();
 	var FromOrderDate;
 	var ToOrderDate;
-	var PageNumber = 1;
+	var PageNumber;
+	var currPage;
+	var totalPages;
 	
-	function createURL(){
+	$(document).ready(function(){
+	})
+	
+	function createURL(pn){
+		PageNumber = pn; currPage = pn;
 		FromOrderDate = document.getElementById("startDate").value;
 		ToOrderDate = document.getElementById("endDate").value;
-		
+		if(FromOrderDate == "" || ToOrderDate == ""){
+			alert("Please Enter From and To dates as inpute for Order Summery Report");
+			return true;
+		}
 		var url = "http://10.0.27.241:8080/Reports/ordersummaryreport?PageNumber="+PageNumber+"&FromOrderDate="+FromOrderDate+"T00:00:00&ToOrderDate="+ToOrderDate+"T23:59:59";
-
+		
 		getconnection(url,getRemoteData);
+		$('.navigation').removeClass(' nodisplay');
 	}
 
 	function getconnection(url,callback){
@@ -100,47 +177,66 @@
 			if (http_request.status == 200||http_request.status == 0){
 				remotexmldata = e.target.responseText;
 				jsonData = eval('('+e.target.responseText+')');
-				ordSumData = jsonData.Output.OrderList.Order
-				console.log("jsonData length = "+ ordSumData.length);
+				if(jsonData.Output){
 				
-				$('#dateSelection').hide();
-				$('.wrap').show();
-				
-				for(var i=0; i<ordSumData.length; i++){
-					reportData[i] = new Array();
-					reportData[i]["0"] = (i+1)+". "+ordSumData[i]["EntryType"];
-					reportData[i]["1"] = ordSumData[i]["OrderDate"].substr(0,10);
-					var t1 = ordSumData[i]["OrderDate"].split("T");
-					var t2  = t1[1].split("+")
-					reportData[i]["2"] = t2[0];
-					reportData[i]["3"] = ordSumData[i]["OrderNo"];
-					var ot = ordSumData[i]["OrderType"].split("_")
-					if(ot[0] == "COD") var paymentType = "Cash On Delivery";
-					else if(ot[0] == "PREPAID") var paymentType = "PREPAID";
-					if(ot[1] == "SHP") var pickType = "SHIP";
-					else if(ot[1] == "PICK") var pickType = "PICK";
-					reportData[i]["4"] = paymentType;
-					reportData[i]["5"] = pickType;
-					reportData[i]["6"] = ordSumData[i].OrderStatuses.OrderStatus[0].StatusDescription
-					reportData[i]["7"] = ordSumData[i]["OriginalTotalAmount"];
-					reportData[i]["8"] = ordSumData[i].OverallTotals["LineSubTotal"];
-					reportData[i]["9"] = ordSumData[i].OverallTotals["GrandCharges"];
-					reportData[i]["10"] = ordSumData[i].OverallTotals["GrandDiscount"];
-					reportData[i]["11"] = ordSumData[i].OverallTotals["GrandTotal"];
-					reportData[i]["12"] = ordSumData[i].OrderStatuses.OrderStatus[0].ShipNode;
-					reportData[i]["13"] = ordSumData[i].OrderStatuses.OrderStatus[0].StatusDate.substr(0,10);
-					reportData[i]["14"] = ordSumData[i].Extn.ExtnSlotTime.substr(0,10);
-					var st1 = ordSumData[i].Extn.ExtnSlotTime.split("-");
-					reportData[i]["15"] = st1[3];
+					var maxRecordsPerPage = jsonData.PageSize;
+					var totalRecords = jsonData.Output.OrderList.TotalNumberOfRecords;
+					totalPages = Math.ceil(totalRecords / maxRecordsPerPage);
+					$('#pageVal').text('Page '+currPage+' / '+totalPages);
 					
-					var table = document.getElementById("mainData");
-					var row = table.insertRow();
-					for(j=0; j<16; j++){
+					if(currPage > 1) $('.btnPrev').css('visibility','visible');
+					else $('.btnPrev').css('visibility','hidden');
+					
+					if(currPage == totalPages) $('.btnNext').css('visibility','hidden');
+					else $('.btnNext').css('visibility','visible');
+					
+					ordSumData = jsonData.Output.OrderList.Order
+					console.log("jsonData length = "+ ordSumData.length+" islastpage = "+jsonData.IsLastPage);
+					
+					$("#mainData").empty();
+					$('#dateSelection').hide();
+					$('.wrap').show();
+					
+					for(var i=0; i<ordSumData.length; i++){
+						reportData[i] = new Array();
+						var currentitem = ((currPage-1)*maxRecordsPerPage)+(i+1)
+						reportData[i]["0"] = currentitem+". "+ordSumData[i]["EntryType"];
+						reportData[i]["1"] = ordSumData[i]["OrderDate"].substr(0,10);
+						var t1 = ordSumData[i]["OrderDate"].split("T");
+						var t2  = t1[1].split("+")
+						reportData[i]["2"] = t2[0];
+						reportData[i]["3"] = ordSumData[i]["OrderNo"];
+						var ot = ordSumData[i]["OrderType"].split("_")
+						if(ot[0] == "COD") var paymentType = "Cash On Delivery";
+						else if(ot[0] == "PREPAID") var paymentType = "PREPAID";
+						if(ot[1] == "SHP") var pickType = "SHIP";
+						else if(ot[1] == "PICK") var pickType = "PICK";
+						reportData[i]["4"] = paymentType;
+						reportData[i]["5"] = pickType;
+						reportData[i]["6"] = ordSumData[i].OrderStatuses.OrderStatus[0].StatusDescription
+						reportData[i]["7"] = ordSumData[i]["OriginalTotalAmount"];
+						reportData[i]["8"] = ordSumData[i].OverallTotals["LineSubTotal"];
+						reportData[i]["9"] = ordSumData[i].OverallTotals["GrandCharges"];
+						reportData[i]["10"] = ordSumData[i].OverallTotals["GrandDiscount"];
+						reportData[i]["11"] = ordSumData[i].OverallTotals["GrandTotal"];
+						reportData[i]["12"] = ordSumData[i].OrderStatuses.OrderStatus[0].ShipNode;
+						reportData[i]["13"] = ordSumData[i].OrderStatuses.OrderStatus[0].StatusDate.substr(0,10);
+						reportData[i]["14"] = ordSumData[i].Extn.ExtnSlotTime.substr(0,10);
+						var st1 = ordSumData[i].Extn.ExtnSlotTime.split("-");
+						reportData[i]["15"] = st1[3];
 						
-						window["cell"+j] = row.insertCell(j);
-						window["cell"+j].innerHTML = reportData[i][j]
-					}							
-				} 
+						var table = document.getElementById("mainData");
+						var row = table.insertRow();
+						for(j=0; j<16; j++){
+							
+							window["cell"+j] = row.insertCell(j);
+							window["cell"+j].innerHTML = reportData[i][j]
+						}							
+					}
+				}
+				else{
+					alert("You have reached End of this report.")
+				}
 			}
 			else{
 				console.log("form.js.... else condition");
@@ -152,7 +248,24 @@
 		$("#mainData").empty();
 		$('.wrap').hide();
 		$('#dateSelection').show();
+		$('.navigation').addClass(' nodisplay');
 	}
+	
+	function showNextPage(){
+		if(PageNumber != undefined){
+			PageNumber = PageNumber+1;
+			createURL(PageNumber);
+		}
+	}
+	
+	function showPrevPage(){
+		if(PageNumber > 1){
+			PageNumber = PageNumber-1;
+			createURL(PageNumber);
+		}
+	}
+	
+	
 </script>
 </head>
 <body>
@@ -161,9 +274,14 @@
 		<span style="font-size:32px; font-family:cursive;">Order Summery Report</span>
 	</div>-->
 	<nav>
-		<div class="logo"><img src="DMartReady.svg" height="72px" width="240px" style="padding-left:50px"></div>
+		<div class="logo"><img src="https://www.dmart.in/wcsstore/DMartStoreFrontAssetStore/images/DMart/DMartReady.svg"></div>
 		<span class="title" style="font-size:32px; font-family:cursive;">Order Summery Report</span>
-		<div class="datepicker" onclick="showDateSelectionPage()"><img src="datePicker.png" height="72px" width="72px" style="padding-left:50px"></div>
+		<div class="navigation nodisplay">
+			<div class="datepicker" onclick="showDateSelectionPage()"><span class="helper"></span><img src="datePicker.png" height="42px" width="42px"></div>
+			<div class="page"><span class="helper"></span><span id="pageVal">Page 1 / 1</span></div>
+			<div class="btnPrev"><span class="helper"></span><button class="button" onclick="showPrevPage()">Prev</button></div>
+			<div class="btnNext"><span class="helper"></span><button class="button" onclick="showNextPage()">Next</button></div>
+		</div>
 	</nav>
 	
 <!-- Below div is to display selection criteria table -->
@@ -180,7 +298,7 @@
 				<th><input type="date" id="startDate"></th>
 				<th><input type="date" id="endDate"></th>
 			</tr>
-			<tr><th colspan="2"><input id="clickMe" type="button" value="View Order Summery Report" onclick="createURL();" /></th></tr>
+			<tr><th colspan="2"><input id="clickMe" type="button" class="button" value="View Order Summery Report" onclick="createURL(1);" /></th></tr>
 		</table>
 	</div>
 <!-- End of display selection criteria table -->
